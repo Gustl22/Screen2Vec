@@ -1,0 +1,8 @@
+# Data
+traces.tar.gz
+unique_uis.tar.gz
+filtered_traces/
+combined/
+
+# IDEs
+.idea/
