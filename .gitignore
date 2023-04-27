@@ -4,5 +4,9 @@ unique_uis.tar.gz
 filtered_traces/
 combined/
 
+# Models
+*.ep120
+*.ep800
+
 # IDEs
 .idea/
