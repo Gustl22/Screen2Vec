@@ -1,7 +1,8 @@
 from collections.abc import Iterable
+from typing import Union, Any
 
-from .convert_class_to_label import convert_class_to_text_label
-from .rico_models import RicoScreen
+from convert_class_to_label import convert_class_to_text_label
+from rico_models import RicoScreen
 
 
 # contains methods for collecting UI elements
@@ -104,7 +105,7 @@ def get_all_labeled_uis_from_node_tree(node, in_list: bool, in_drawer: bool, tes
         results.append([text, text_class, bounds])
     if 'children' in node and isinstance(node['children'], Iterable):
         for child_node in node['children']:
-            if (isinstance(child_node, dict)):
+            if isinstance(child_node, dict):
                 if text_class == 12:
                     in_list = True
                 if text_class == 7:
@@ -113,6 +114,6 @@ def get_all_labeled_uis_from_node_tree(node, in_list: bool, in_drawer: bool, tes
     return results
 
 
-def get_all_labeled_uis_from_rico_screen(rico_screen: RicoScreen, testing=False):
+def get_all_labeled_uis_from_rico_screen(rico_screen: RicoScreen, testing=False) -> list[list[Union[Union[str, int, None], Any]]]:
     if rico_screen.activity is not None and rico_screen.activity.root_node is not None:
         return get_all_labeled_uis_from_node_tree(rico_screen.activity.root_node, False, False, testing)

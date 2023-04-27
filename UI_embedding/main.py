@@ -31,9 +31,9 @@ parser.add_argument("-l", "--loss", type=str, default="cel")
 
 args = parser.parse_args()
 
-bert = SentenceTransformer('bert-base-nli-mean-tokens')
+bert: SentenceTransformer = SentenceTransformer('bert-base-nli-mean-tokens')
 with open(args.vocab_path) as f:
-    vocab_list = json.load(f, encoding='utf-8')
+    vocab_list: [str] = json.load(f, encoding='utf-8')
 
 vocab = BertScreenVocab(vocab_list, len(vocab_list), bert, 768, args.embedding_path)
 

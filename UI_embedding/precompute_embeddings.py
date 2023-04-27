@@ -9,6 +9,7 @@ from sentence_transformers import SentenceTransformer
 from torch.utils.data import Dataset, DataLoader
 
 from UI2Vec import HiddenLabelPredictorModel
+from UI_embedding.UI2Vec import HiddenLabelPredictorModel
 from dataset.playstore_scraper import get_app_description
 from dataset.rico_dao import load_rico_screen_dict
 from dataset.rico_utils import get_all_labeled_uis_from_rico_screen
@@ -40,10 +41,10 @@ parser.add_argument("-n", "--n", default=16, type=int, help="number of predictor
 
 args = parser.parse_args()
 
-bert = SentenceTransformer('bert-base-nli-mean-tokens')
-bert_size = 768
+bert: SentenceTransformer = SentenceTransformer('bert-base-nli-mean-tokens')
+bert_size: int = 768
 
-loaded_model = HiddenLabelPredictorModel(bert, bert_size, args.n)
+loaded_model: HiddenLabelPredictorModel = HiddenLabelPredictorModel(bert, bert_size, args.n)
 loaded_model.load_state_dict(torch.load(args.model))
 
 descriptions = []

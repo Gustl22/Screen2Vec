@@ -8,6 +8,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import tqdm
 from PIL import Image
+from numpy import ndarray
 from torch.utils.data import Dataset
 
 
@@ -16,13 +17,17 @@ from torch.utils.data import Dataset
 
 class ScreenLayout():
 
-    def __init__(self, screen_path):
+    horiz_scale: float
+    pixels: ndarray
+    vert_scale: float
+
+    def __init__(self, screen_path: str):
         self.pixels = np.full((100, 56, 2), 0, dtype=float)
         self.vert_scale = 100 / 2560
         self.horiz_scale = 56 / 1440
         self.load_screen(screen_path)
 
-    def load_screen(self, screen_path):
+    def load_screen(self, screen_path: str):
         with open(screen_path) as f:
             hierarchy = json.load(f)
         try:
@@ -37,7 +42,7 @@ class ScreenLayout():
         results = []
         if 'children' in node and isinstance(node['children'], Iterable):
             for child_node in node['children']:
-                if (isinstance(child_node, dict)):
+                if isinstance(child_node, dict):
                     self.load_screen_contents(child_node)
         else:
             try:
@@ -147,6 +152,9 @@ class LayoutDecoder(nn.Module):
 
 
 class LayoutAutoEncoder(nn.Module):
+
+    dec: LayoutDecoder
+    enc: LayoutEncoder
 
     def __init__(self):
         super(LayoutAutoEncoder, self).__init__()

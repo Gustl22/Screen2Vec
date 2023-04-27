@@ -1,15 +1,19 @@
 import argparse
 import json
-import numpy as np
+
 import torch
-from Screen2Vec import Screen2Vec
+from numpy import ndarray
 from sentence_transformers import SentenceTransformer
-from prediction import TracePredictor
-from autoencoder import ScreenLayout, LayoutAutoEncoder
-from UI_embedding.UI2Vec import HiddenLabelPredictorModel, UI2Vec
+
+from Screen2Vec import Screen2Vec
+from UI_embedding.UI2Vec import HiddenLabelPredictorModel
+from autoencoder import ScreenLayout, LayoutAutoEncoder, LayoutEncoder
 from dataset.playstore_scraper import get_app_description
-from dataset.rico_utils import get_all_labeled_uis_from_rico_screen, ScreenInfo
 from dataset.rico_dao import load_rico_screen_dict
+from dataset.rico_models import RicoScreen
+from dataset.rico_utils import get_all_labeled_uis_from_rico_screen
+from prediction import TracePredictor
+from types import FILE_LIKE
 
 # Generates the vector embeddings for an input screen
 
@@ -21,20 +25,23 @@ parser.add_argument("-n", "--num_predictors", type=int, default=4, help="number 
 parser.add_argument("-m", "--screen_model", required=True, type=str, help="path to screen embedding model")
 parser.add_argument("-l", "--layout_model", required=True, type=str, help="path to layout embedding model")
 parser.add_argument("-v", "--net_version", type=int, default=4,
-                    help="0 for regular, 1 to embed location in UIs, 2 to use layout embedding, 3 to use both, 4 with both but no description, 5 to use both but not train description")
+                    help="0 for regular, 1 to embed location in UIs, 2 to use layout embedding, 3 to use both, "
+                         "4 with both but no description, 5 to use both but not train description")
 
 args = parser.parse_args()
 
 
-def get_embedding(screen, ui_model, screen_model, layout_model, num_predictors, net_version):
+def get_embedding(screen: FILE_LIKE, ui_model: FILE_LIKE, screen_model: FILE_LIKE, layout_model: FILE_LIKE,
+                  num_predictors: int,
+                  net_version: int) -> object:
     with open(screen) as f:
-        rico_screen = load_rico_screen_dict(json.load(f))
+        rico_screen: RicoScreen = load_rico_screen_dict(json.load(f))
     labeled_text = get_all_labeled_uis_from_rico_screen(rico_screen)
 
-    bert = SentenceTransformer('bert-base-nli-mean-tokens')
-    bert_size = 768
+    bert: SentenceTransformer = SentenceTransformer('bert-base-nli-mean-tokens')
+    bert_size: int = 768
 
-    loaded_ui_model = HiddenLabelPredictorModel(bert, bert_size, 16)
+    loaded_ui_model: HiddenLabelPredictorModel = HiddenLabelPredictorModel(bert, bert_size, 16)
     loaded_ui_model.load_state_dict(torch.load(ui_model), strict=False)
 
     ui_class = torch.tensor([UI[1] for UI in labeled_text])
@@ -52,11 +59,11 @@ def get_embedding(screen, ui_model, screen_model, layout_model, num_predictors, 
 
     descr_emb = torch.as_tensor(bert.encode([descr]), dtype=torch.float)
 
-    layout_autoencoder = LayoutAutoEncoder()
+    layout_autoencoder: LayoutAutoEncoder = LayoutAutoEncoder()
     layout_autoencoder.load_state_dict(torch.load(layout_model))
-    layout_embedder = layout_autoencoder.enc
-    screen_to_add = ScreenLayout(args.screen)
-    screen_pixels = screen_to_add.pixels.flatten()
+    layout_embedder: LayoutEncoder = layout_autoencoder.enc
+    screen_to_add: ScreenLayout = ScreenLayout(args.screen)
+    screen_pixels: ndarray = screen_to_add.pixels.flatten()
     encoded_layout = layout_embedder(torch.as_tensor(screen_pixels, dtype=torch.float).unsqueeze(0)).squeeze(0)
 
     if net_version in [0, 2, 6]:

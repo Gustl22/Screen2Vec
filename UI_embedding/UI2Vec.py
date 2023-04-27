@@ -1,5 +1,7 @@
 import torch
 import torch.nn as nn
+from sentence_transformers import SentenceTransformer
+from torch.nn import Linear
 
 
 # contains classes that compose the UI embedding model
@@ -56,8 +58,15 @@ class HiddenLabelPredictorModel(nn.Module):
     combines the n closest UI elements (text plus class) to predict the embedding
     of a different one on the same screen
     """
+    bert_size: int
+    num_classes: int
+    n: int
+    model: UI2Vec
+    class_emb_size: int
+    lin: Linear
 
-    def __init__(self, bert, bert_size, n, class_emb_size=6, num_classes=26):
+    def __init__(self, bert: SentenceTransformer, bert_size: int, n: int, class_emb_size: int = 6,
+                 num_classes: int = 26) -> object:
         super().__init__()
         self.class_emb_size = class_emb_size
         self.lin = nn.Linear(bert_size * n, bert_size + self.class_emb_size)
