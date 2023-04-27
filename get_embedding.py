@@ -20,7 +20,8 @@ parser.add_argument("-u", "--ui_model", required=True, type=str, help="path to U
 parser.add_argument("-n", "--num_predictors", type=int, default=4, help="number of other labels used to predict one")
 parser.add_argument("-m", "--screen_model", required=True, type=str, help="path to screen embedding model")
 parser.add_argument("-l", "--layout_model", required=True, type=str, help="path to layout embedding model")
-parser.add_argument("-v", "--net_version", type=int, default=4, help="0 for regular, 1 to embed location in UIs, 2 to use layout embedding, 3 to use both, 4 with both but no description, 5 to use both but not train description")
+parser.add_argument("-v", "--net_version", type=int, default=4,
+                    help="0 for regular, 1 to embed location in UIs, 2 to use layout embedding, 3 to use both, 4 with both but no description, 5 to use both but not train description")
 
 args = parser.parse_args()
 
@@ -40,7 +41,7 @@ def get_embedding(screen, ui_model, screen_model, layout_model, num_predictors, 
     ui_text = [UI[0] for UI in labeled_text]
     UI_embeddings = loaded_ui_model.model([ui_text, ui_class])
 
-    #avg_embedding = UI_embeddings.sum(dim=0)/len(labeled_text)
+    # avg_embedding = UI_embeddings.sum(dim=0)/len(labeled_text)
 
     try:
         package_name = rico_screen.activity_name.split("/")[0]
@@ -50,7 +51,7 @@ def get_embedding(screen, ui_model, screen_model, layout_model, num_predictors, 
         print(str(e))
 
     descr_emb = torch.as_tensor(bert.encode([descr]), dtype=torch.float)
-    
+
     layout_autoencoder = LayoutAutoEncoder()
     layout_autoencoder.load_state_dict(torch.load(layout_model))
     layout_embedder = layout_autoencoder.enc
@@ -58,18 +59,17 @@ def get_embedding(screen, ui_model, screen_model, layout_model, num_predictors, 
     screen_pixels = screen_to_add.pixels.flatten()
     encoded_layout = layout_embedder(torch.as_tensor(screen_pixels, dtype=torch.float).unsqueeze(0)).squeeze(0)
 
-
-    if net_version in [0,2,6]:
+    if net_version in [0, 2, 6]:
         adus = 0
     else:
         # case where coordinates are part of UI rnn
         adus = 4
-    if net_version in [0,1,6]:
+    if net_version in [0, 1, 6]:
         adss = 0
     else:
         # case where screen layout vec is used
         adss = 64
-    if net_version in [0,1,2,3]:
+    if net_version in [0, 1, 2, 3]:
         desc_size = 768
     else:
         # no description in training case
@@ -79,22 +79,24 @@ def get_embedding(screen, ui_model, screen_model, layout_model, num_predictors, 
     loaded_screen_model = TracePredictor(screen_embedder, net_version)
     loaded_screen_model.load_state_dict(torch.load(screen_model))
 
-
-    if net_version in [1,3,4,5]:
+    if net_version in [1, 3, 4, 5]:
         coords = torch.FloatTensor([labeled_text[x][2] for x in range(len(UI_embeddings))])
-        UI_embeddings = torch.cat((UI_embeddings.cpu(),coords),dim=1)
-    if net_version in [0,1,6]:
+        UI_embeddings = torch.cat((UI_embeddings.cpu(), coords), dim=1)
+    if net_version in [0, 1, 6]:
         screen_layout = None
-    else: screen_layout = encoded_layout.unsqueeze(0).unsqueeze(0)
+    else:
+        screen_layout = encoded_layout.unsqueeze(0).unsqueeze(0)
 
-    screen_emb = screen_embedder(UI_embeddings.unsqueeze(1).unsqueeze(0), descr_emb.unsqueeze(0), None, screen_layout, False)
+    screen_emb = screen_embedder(UI_embeddings.unsqueeze(1).unsqueeze(0), descr_emb.unsqueeze(0), None, screen_layout,
+                                 False)
 
     if descr_emb.size()[0] == 1:
         descr_emb = descr_emb.squeeze(0)
-    #baseline_emb = torch.cat((avg_embedding, descr_emb), dim=0)
+    # baseline_emb = torch.cat((avg_embedding, descr_emb), dim=0)
 
     return encoded_layout, screen_emb[0][0]
 
-embeddings = get_embedding(args.screen, args.ui_model, args.screen_model, args.layout_model, args.num_predictors, args.net_version)
-print(embeddings)
 
+embeddings = get_embedding(args.screen, args.ui_model, args.screen_model, args.layout_model, args.num_predictors,
+                           args.net_version)
+print(embeddings)

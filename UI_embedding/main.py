@@ -1,27 +1,29 @@
 import argparse
 import json
+
 import numpy as np
 import tqdm
-import torch
+from sentence_transformers import SentenceTransformer
 from torch.utils.data import DataLoader
-from torch.utils.data.sampler import SubsetRandomSampler
-from UI2Vec import HiddenLabelPredictorModel 
-from prepretrainer import UI2VecTrainer
+
+from UI2Vec import HiddenLabelPredictorModel
 from dataset.dataset import RicoDataset, ScreenDataset
 from dataset.vocab import BertScreenVocab
-from sentence_transformers import SentenceTransformer
 from plotter import plot_loss
+from prepretrainer import UI2VecTrainer
 
 # Main function for training UI model
 
 parser = argparse.ArgumentParser()
 
-parser.add_argument("-d", "--dataset", required=False, type=str, default=None, help="dataset to use to test/train model")
+parser.add_argument("-d", "--dataset", required=False, type=str, default=None,
+                    help="dataset to use to test/train model")
 parser.add_argument("-o", "--output_path", required=True, type=str, help="where to store model")
 parser.add_argument("-b", "--batch_size", type=int, default=256, help="traces in a batch")
 parser.add_argument("-e", "--epochs", type=int, default=10, help="number of epochs")
 parser.add_argument("-v", "--vocab_path", required=True, type=str, help="path to file with full vocab")
-parser.add_argument("-m", "--embedding_path",  type=str, default=None, help="path to file with precomputed vocab embeddings")
+parser.add_argument("-m", "--embedding_path", type=str, default=None,
+                    help="path to file with precomputed vocab embeddings")
 parser.add_argument("-n", "--num_predictors", type=int, default=16, help="number of other labels used to predict one")
 parser.add_argument("-r", "--rate", type=float, default=0.001, help="learning rate")
 parser.add_argument("-hi", "--hierarchy", action="store_true")
@@ -57,11 +59,10 @@ with open('ui_validation' + '.json', 'w', encoding='utf-8') as f:
 train_data_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
 test_data_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=True)
 
+predictor = HiddenLabelPredictorModel(bert, 768, args.num_predictors)
 
-predictor = HiddenLabelPredictorModel(bert, 768, args.num_predictors) 
-
-
-trainer = UI2VecTrainer(predictor, train_data_loader, test_data_loader, vocab, len(vocab_list), args.rate, args.num_predictors, 768, args.loss)
+trainer = UI2VecTrainer(predictor, train_data_loader, test_data_loader, vocab, len(vocab_list), args.rate,
+                        args.num_predictors, 768, args.loss)
 
 test_loss_data = []
 train_loss_data = []
@@ -74,7 +75,7 @@ for epoch in tqdm.tqdm(range(args.epochs)):
         test_loss = trainer.test(epoch)
         print(test_loss)
         test_loss_data.append(test_loss)
-    if (epoch%20)==0:
+    if (epoch % 20) == 0:
         trainer.save(epoch, args.output_path)
 trainer.save(args.epochs, args.output_path)
 plot_loss(train_loss_data, test_loss_data)

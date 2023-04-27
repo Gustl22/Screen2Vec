@@ -1,11 +1,15 @@
 import json
+
 import numpy as np
+
 from .rico_models import RicoActivity, RicoScreen, ScreenInfo
+
 
 # methods for parsing rico dataset files
 
 def rico_node_decoder(rico_node_dict: dict):
     return rico_node_dict
+
 
 def load_rico_activity_dict(rico_activity_dict: dict):
     root_node = rico_node_decoder(rico_activity_dict['root'])
@@ -28,10 +32,12 @@ def load_rico_screen(rico_dir, rico_number):
         rico_screen = json.load(f)
         return load_rico_screen_dict(rico_screen)
 
+
 def write_embedding_to_file(dir, rico_id, embedding):
     embedding_json = json.dumps(embedding.tolist())
     with open(dir + '/' + str(rico_id) + '.json', 'w') as f:
         f.write(embedding_json)
+
 
 def read_embedding_from_file(embedding_dir, rico_id):
     try:
@@ -46,10 +52,12 @@ def read_embedding_from_file(embedding_dir, rico_id):
         # print(e)
         return None
 
+
 def read_rico_id_text_label_list_dict(embedding_dir):
     with open(embedding_dir + '/' + 'rico_id_text_label_list_dict' + '.json', 'r') as f:
         rico_id_text_label_list_dict_json = f.read()
     return json.loads(rico_id_text_label_list_dict_json)
+
 
 def read_rico_id_screen_info_dict(embedding_dir):
     with open(embedding_dir + '/' + 'rico_id_screen_info_dict' + '.json', 'r') as f:

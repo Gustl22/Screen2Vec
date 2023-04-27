@@ -1,14 +1,12 @@
 import argparse
-import torch
-import torch.nn as nn
-from sentence_transformers import SentenceTransformer
 import json
-import scipy
-import random
-import numpy as np
-from torch.utils.data import DataLoader
-from sentence_transformers import SentenceTransformer
 import os
+import random
+
+import numpy as np
+import scipy
+from sentence_transformers import SentenceTransformer
+
 
 # contains code for running nearest neighbor experiment
 
@@ -17,11 +15,12 @@ def main():
 
     parser.add_argument("-e", "--emb_path", type=str, default="", help="path to stored embeddings")
     parser.add_argument("-s", "--selected", type=str, default="", help="path to query screen")
-    parser.add_argument("-c", "--command", type=str, default="", help="natural language command to find relevant screens for")
+    parser.add_argument("-c", "--command", type=str, default="",
+                        help="natural language command to find relevant screens for")
     parser.add_argument("-n", "--n", type=int, default=5, help="number of relevant screens to find")
 
     args = parser.parse_args()
-    
+
     with open(args.emb_path) as f:
         embeddings = json.load(f, encoding='utf-8')
     if args.selected:
@@ -29,34 +28,38 @@ def main():
     elif args.command:
         bert = SentenceTransformer('bert-base-nli-mean-tokens')
         src_emb = bert.encode([args.command])
-        print(get_most_relevant_embeddings_nl(src_emb, embeddings,5))
+        print(get_most_relevant_embeddings_nl(src_emb, embeddings, 5))
     else:
         n = 0
         keys = list(embeddings.keys())
         while n < 10:
-            n+=1
+            n += 1
             key = random.choice(keys)
             print("___________________________________")
             print(key)
             print("_-_-_-_-_-_-")
             print(get_most_relevant_embeddings(key, embeddings, 5))
 
+
 if __name__ == "__main__":
     main()
+
 
 def get_full_path_from_relative_path_if_not_available(file_path, home_dataset_path):
     if (not os.path.exists(file_path)):
         return home_dataset_path + file_path
     else:
         return file_path
-    
-    
+
+
 def get_hierachy_for_json_path(json_path, home_dataset_path):
     with open(get_full_path_from_relative_path_if_not_available(json_path, home_dataset_path)) as f:
         data = json.load(f)
         return data
 
-def get_most_relevant_embeddings(src_id, rico_id_embedding_dict: dict, n: int, home_dataset_path, filter_duplicated_activity = False):
+
+def get_most_relevant_embeddings(src_id, rico_id_embedding_dict: dict, n: int, home_dataset_path,
+                                 filter_duplicated_activity=False):
     try:
         src_embedding = rico_id_embedding_dict[src_id]
     except KeyError as e:
@@ -67,11 +70,11 @@ def get_most_relevant_embeddings(src_id, rico_id_embedding_dict: dict, n: int, h
             back = src_id[-4:]
             front = "/".join(front)
             back = "/".join(back)
-            src_id = "//".join([front,back])
+            src_id = "//".join([front, back])
             src_embedding = rico_id_embedding_dict[src_id]
         except KeyError as e:
             src_embedding = list(rico_id_embedding_dict.values())[0]
-            
+
     screen_info_similarity_list = []
     app_name_1 = src_id.split("/")[-4]
     for rico_id, embedding in rico_id_embedding_dict.items():
@@ -87,12 +90,12 @@ def get_most_relevant_embeddings(src_id, rico_id_embedding_dict: dict, n: int, h
         entry = {}
         entry['rico_id'] = rico_id
         entry['score'] = scipy.spatial.distance.cosine(src_embedding, embedding)
-        if (entry['rico_id'] is not None and not np.isnan (entry['score'])):  
+        if (entry['rico_id'] is not None and not np.isnan(entry['score'])):
             screen_info_similarity_list.append(entry)
     screen_info_similarity_list.sort(key=lambda x: x['score'])
-    
+
     if filter_duplicated_activity:
-        filtered_result = []      
+        filtered_result = []
         activity_name_set = set()
         for entry in screen_info_similarity_list:
             json_data = get_hierachy_for_json_path(entry['rico_id'], home_dataset_path)
@@ -103,7 +106,9 @@ def get_most_relevant_embeddings(src_id, rico_id_embedding_dict: dict, n: int, h
             if (len(filtered_result) >= n):
                 break
         return filtered_result
-    return screen_info_similarity_list[0:n if n <= len(screen_info_similarity_list) else len(screen_info_similarity_list)]
+    return screen_info_similarity_list[
+           0:n if n <= len(screen_info_similarity_list) else len(screen_info_similarity_list)]
+
 
 def vector_compose(screen1, screen2, screen3, emb_dict):
     """
@@ -118,12 +123,13 @@ def vector_compose(screen1, screen2, screen3, emb_dict):
         if ((isinstance(embedding, int)) and embedding == 0):
             continue
         dist = scipy.spatial.distance.cosine(result, embedding)
-        if dist<closest:
+        if dist < closest:
             closest = dist
             close_screen = id
     return close_screen
 
-def get_most_relevant_embeddings_nl(src_embedding, rico_id_embedding_dict: dict, n:int):
+
+def get_most_relevant_embeddings_nl(src_embedding, rico_id_embedding_dict: dict, n: int):
     screen_info_similarity_list = []
     for rico_id, embedding in rico_id_embedding_dict.items():
         if (embedding is None or src_embedding is None):
@@ -140,5 +146,3 @@ def get_most_relevant_embeddings_nl(src_embedding, rico_id_embedding_dict: dict,
         screen_info_similarity_list.append(entry)
     screen_info_similarity_list.sort(key=lambda x: x['score'])
     return screen_info_similarity_list[0:n]
-
-

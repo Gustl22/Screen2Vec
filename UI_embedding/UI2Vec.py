@@ -1,6 +1,6 @@
-from sentence_transformers import SentenceTransformer
 import torch
 import torch.nn as nn
+
 
 # contains classes that compose the UI embedding model
 
@@ -8,6 +8,7 @@ class UIEmbedder(nn.Module):
     """
     Model intended to semantically embed the content of a UI element into a vector
     """
+
     def __init__(self, bert, bert_size=768, num_classes=26, class_emb_size=6):
         super().__init__()
         self.text_embedder = bert
@@ -24,8 +25,8 @@ class UIEmbedder(nn.Module):
                 x[index] = torch.zeros(self.bert_size + self.class_size)
         return x
 
-class UI2Vec(nn.Module):
 
+class UI2Vec(nn.Module):
     """
     Model that wraps the UI Embedder
     """
@@ -49,15 +50,17 @@ class UI2Vec(nn.Module):
         output = self.lin(input_vector)
         return output
 
+
 class HiddenLabelPredictorModel(nn.Module):
     """
     combines the n closest UI elements (text plus class) to predict the embedding
     of a different one on the same screen
     """
+
     def __init__(self, bert, bert_size, n, class_emb_size=6, num_classes=26):
         super().__init__()
         self.class_emb_size = class_emb_size
-        self.lin = nn.Linear(bert_size*n, bert_size+ self.class_emb_size)
+        self.lin = nn.Linear(bert_size * n, bert_size + self.class_emb_size)
         self.lin.cuda()
         self.model = UI2Vec(bert)
         self.n = n
@@ -70,5 +73,5 @@ class HiddenLabelPredictorModel(nn.Module):
         text_embedding = self.model(context[0])
         for index in range(1, self.n):
             to_add = self.model(context[index])
-            text_embedding = torch.cat((text_embedding, to_add),1)
+            text_embedding = torch.cat((text_embedding, to_add), 1)
         return self.lin(text_embedding)

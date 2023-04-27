@@ -1,15 +1,12 @@
-
+import numpy as np
 import torch
 import torch.nn as nn
-from torch.optim import Adam
-from torch.utils.data import DataLoader
-import numpy as np
-
 import tqdm
+from torch.optim import Adam
 
-from Screen2Vec import Screen2Vec
 from prediction import TracePredictor
 from vocab import ScreenVocab
+
 
 # contains class that will train our Screen2Vec model
 
@@ -18,8 +15,9 @@ class Screen2VecTrainer:
     Trains a Screen2Vec embedding using a prediction task
     """
 
-    def __init__(self, predictor: TracePredictor, vocab_train: ScreenVocab, vocab_test: ScreenVocab, dataloader_train, dataloader_test, 
-                l_rate: float, neg_samp: int, loss_type='cel'):
+    def __init__(self, predictor: TracePredictor, vocab_train: ScreenVocab, vocab_test: ScreenVocab, dataloader_train,
+                 dataloader_test,
+                 l_rate: float, neg_samp: int, loss_type='cel'):
         """
         predictor: TracePredictor module
         vocab_train: a ScreenVocab from which to find a negative sample for the training data
@@ -66,9 +64,9 @@ class Screen2VecTrainer:
 
         str_code = "train" if train else "test"
         data_itr = tqdm.tqdm(enumerate(data_loader),
-                              desc="EP_%s:%d" % (str_code, epoch),
-                              total=len(data_loader),
-                              bar_format="{l_bar}{r_bar}")
+                             desc="EP_%s:%d" % (str_code, epoch),
+                             total=len(data_loader),
+                             bar_format="{l_bar}{r_bar}")
         # to avoid memory leak
         if not train:
             torch.set_grad_enabled(False)
@@ -78,7 +76,7 @@ class Screen2VecTrainer:
 
             # load data 
             UIs, descr, trace_screen_lengths, indices, layouts = data
-            total_data+=len(UIs)
+            total_data += len(UIs)
             # move to GPU
             UIs = UIs.cuda()
             descr = descr.cuda()
@@ -87,10 +85,12 @@ class Screen2VecTrainer:
                 layouts = layouts.cuda()
             # get negative samples to compare against
             if train:
-                UIs_comp, comp_descr, comp_tsl, comp_layouts = self.vocab_train.negative_sample(self.neg_sample_num, indices)
+                UIs_comp, comp_descr, comp_tsl, comp_layouts = self.vocab_train.negative_sample(self.neg_sample_num,
+                                                                                                indices)
             else:
                 # smaller negative sample for test data because there's less of it
-                UIs_comp, comp_descr, comp_tsl, comp_layouts = self.vocab_test.negative_sample(int(self.neg_sample_num/8), indices)
+                UIs_comp, comp_descr, comp_tsl, comp_layouts = self.vocab_test.negative_sample(
+                    int(self.neg_sample_num / 8), indices)
             # move to GPU
             UIs_comp = UIs_comp.cuda()
             comp_descr = comp_descr.cuda()
@@ -99,37 +99,36 @@ class Screen2VecTrainer:
                 comp_layouts = comp_layouts.cuda()
 
             # forward the prediction models
-            c, result, context = self.predictor(UIs, descr, trace_screen_lengths, layouts) #input here
+            c, result, context = self.predictor(UIs, descr, trace_screen_lengths, layouts)  # input here
             h_comp = self.predictor.model(UIs_comp, comp_descr, comp_tsl, comp_layouts, False).squeeze(0)
 
             if self.loss_type == 'cel':
                 # dot products to find out similarity
                 # with negative sampling
-                neg_dot_products = torch.mm(c, h_comp.transpose(0,1).cuda())
+                neg_dot_products = torch.mm(c, h_comp.transpose(0, 1).cuda())
                 # with other screens in trace
-                neg_self_dot_products = torch.bmm(c.unsqueeze(1), context.transpose(1,2)).squeeze(1)
+                neg_self_dot_products = torch.bmm(c.unsqueeze(1), context.transpose(1, 2)).squeeze(1)
                 # with targets
-                pos_dot_products = torch.mm(c, result.transpose(0,1).cuda())
-                correct = torch.from_numpy(np.arange(0,len(UIs)))
+                pos_dot_products = torch.mm(c, result.transpose(0, 1).cuda())
+                correct = torch.from_numpy(np.arange(0, len(UIs)))
                 dot_products = torch.cat((pos_dot_products, neg_dot_products, neg_self_dot_products), dim=1)
                 dot_products = dot_products.cpu()
 
                 # calculate loss for this batch
                 prediction_loss = self.loss(dot_products, correct.long())
-                total_loss+=float(prediction_loss)
+                total_loss += float(prediction_loss)
 
             elif self.loss_type == 'cossim':
                 pred_binary = torch.ones(len(c)).cuda()
-                prediction_loss = self.loss(c,result,pred_binary)
-                total_loss+=float(prediction_loss)
+                prediction_loss = self.loss(c, result, pred_binary)
+                total_loss += float(prediction_loss)
             # if in train, backwards and optimization
             if train:
                 prediction_loss.backward()
                 self.optimizer.step()
-        if not train: 
+        if not train:
             torch.set_grad_enabled(True)
-        return total_loss/total_data
-        
+        return total_loss / total_data
 
     def save(self, epoch, file_path="output/trained.model"):
         """

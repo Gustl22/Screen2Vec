@@ -1,10 +1,12 @@
-from dataset.rico_utils import get_all_texts_from_rico_screen
-from dataset.rico_dao import load_rico_screen_dict
 import argparse
 import json
 import os
-from sentence_transformers import SentenceTransformer
+
 import numpy as np
+from sentence_transformers import SentenceTransformer
+
+from dataset.rico_dao import load_rico_screen_dict
+from dataset.rico_utils import get_all_texts_from_rico_screen
 
 # finds the vocab (all GUI labels within data) to use for comparison in training
 
@@ -24,7 +26,8 @@ for package_dir in os.listdir(rico_dir):
             # for each trace directory
             if os.path.isdir(rico_dir + '/' + package_dir + '/' + trace_dir) and (not trace_dir.startswith('.')):
                 if os.path.isdir(rico_dir + '/' + package_dir + '/' + trace_dir + '/' + 'view_hierarchies'):
-                    for view_hierarchy_json in os.listdir(rico_dir + '/' + package_dir + '/' + trace_dir + '/' + 'view_hierarchies'):
+                    for view_hierarchy_json in os.listdir(
+                            rico_dir + '/' + package_dir + '/' + trace_dir + '/' + 'view_hierarchies'):
                         if view_hierarchy_json.endswith('.json') and (not view_hierarchy_json.startswith('.')):
                             json_file_path = rico_dir + '/' + package_dir + '/' + trace_dir + '/' + 'view_hierarchies' + '/' + view_hierarchy_json
                             with open(json_file_path) as f:
@@ -55,4 +58,3 @@ else:
     emb_output_path = "vocab_emb"
 
 np.save(emb_output_path, vocab_emb)
-

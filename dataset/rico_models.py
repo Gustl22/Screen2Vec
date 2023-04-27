@@ -1,5 +1,6 @@
 import json
 
+
 # class definitions for RICO dataset
 
 class ScreenInfo:

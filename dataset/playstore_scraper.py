@@ -1,6 +1,9 @@
-import play_scraper
 from os import path
+
+import play_scraper
+
 DEFAULT_APP_DESCRIPTION_PATH = './PlayStoreDescriptions/'
+
 
 # handles querying for app description
 
@@ -15,6 +18,7 @@ def get_app_description(packageName):
             return ''
     except Exception as e:
         return ''
+
 
 # scrape the playstore description for packageName and store it in path as a txt file
 def update_app_description_file(packageName, dir_path):
@@ -36,8 +40,7 @@ def update_app_description_file(packageName, dir_path):
         f.close()
     return description
 
+
 def update_app_description_file_in_batch(packageNameList, dir_path):
     for packageName in packageNameList:
         update_app_description_file(packageName, dir_path)
-
-

@@ -1,15 +1,14 @@
 import argparse
-import torch
-import torch.nn as nn
-from sentence_transformers import SentenceTransformer
 import json
 import os
-import scipy
+
 import numpy as np
-from dataset.rico_utils import get_all_texts_from_rico_screen
-from dataset.rico_dao import load_rico_screen_dict
+import torch
 from sentence_transformers import SentenceTransformer
+
 from autoencoder import ScreenLayout, LayoutAutoEncoder, ScreenVisualLayout, ImageAutoEncoder
+from dataset.rico_dao import load_rico_screen_dict
+from dataset.rico_utils import get_all_texts_from_rico_screen
 
 # generates the embeddings for the baseline models in the format needed by the model tester
 
@@ -42,15 +41,16 @@ for package_dir in os.listdir(args.dataset):
             if os.path.isdir(args.dataset + '/' + package_dir + '/' + trace_dir) and (not trace_dir.startswith('.')):
                 trace_id = package_dir + trace_dir[-1]
                 print(i)
-                i+=1
+                i += 1
                 trace_layouts = []
                 trace_visuals = []
                 trace_words = []
-                for view_hierarchy_json in os.listdir(args.dataset + '/' + package_dir + '/' + trace_dir + '/' + 'view_hierarchies'):
+                for view_hierarchy_json in os.listdir(
+                        args.dataset + '/' + package_dir + '/' + trace_dir + '/' + 'view_hierarchies'):
                     if view_hierarchy_json.endswith('.json') and (not view_hierarchy_json.startswith('.')):
                         json_file_path = package_dir + '/' + trace_dir + '/' + 'view_hierarchies' + '/' + view_hierarchy_json
                         try:
-                            with open(args.dataset + '/' +  json_file_path) as f:
+                            with open(args.dataset + '/' + json_file_path) as f:
                                 rico_screen = load_rico_screen_dict(json.load(f))
                                 text = get_all_texts_from_rico_screen(rico_screen)
                                 if text == []:
@@ -65,13 +65,15 @@ for package_dir in os.listdir(args.dataset):
                             word_avg_emb = word_embs[0]
                         trace_words.append(word_avg_emb.tolist())
 
-                        layout_screen = ScreenLayout(args.dataset + '/' +  json_file_path)
+                        layout_screen = ScreenLayout(args.dataset + '/' + json_file_path)
                         screen_pix = torch.from_numpy(layout_screen.pixels.flatten()).type(torch.FloatTensor)
                         layout_emb = layout_autoencoder.enc(screen_pix)
                         trace_layouts.append(layout_emb.detach().tolist())
-                        
-                        vis_screen = ScreenVisualLayout(args.dataset + "/" + package_dir + '/' + trace_dir + '/' + 'screenshots' + '/' + view_hierarchy_json.split(".")[0] + ".jpg")
-                        screen_pix = torch.from_numpy(vis_screen.pixels.flatten()).type(torch.FloatTensor)/255
+
+                        vis_screen = ScreenVisualLayout(
+                            args.dataset + "/" + package_dir + '/' + trace_dir + '/' + 'screenshots' + '/' +
+                            view_hierarchy_json.split(".")[0] + ".jpg")
+                        screen_pix = torch.from_numpy(vis_screen.pixels.flatten()).type(torch.FloatTensor) / 255
                         vis_emb = visual_autoencoder.encoder(screen_pix)
                         trace_visuals.append(vis_emb.detach().tolist())
                 word_embeddings.append(trace_words)
@@ -86,6 +88,3 @@ with open(args.output + 'layout_eval.json', 'w', encoding='utf-8') as f:
 
 with open(args.output + 'visual_eval.json', 'w', encoding='utf-8') as f:
     json.dump(visual_embeddings, f, indent=4)
-
-
-

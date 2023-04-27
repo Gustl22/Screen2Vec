@@ -1,15 +1,18 @@
-from sentence_transformers import SentenceTransformer
-import json
-import numpy as np
 import argparse
-import torch
-from torch.utils.data import Dataset, DataLoader
-import tqdm
+import json
 import os
-from dataset.playstore_scraper import get_app_description
-from dataset.rico_utils import get_all_texts_from_rico_screen, get_all_labeled_uis_from_rico_screen, ScreenInfo
-from dataset.rico_dao import load_rico_screen_dict
+
+import numpy as np
+import torch
+import tqdm
+from sentence_transformers import SentenceTransformer
+from torch.utils.data import Dataset, DataLoader
+
 from UI2Vec import HiddenLabelPredictorModel
+from dataset.playstore_scraper import get_app_description
+from dataset.rico_dao import load_rico_screen_dict
+from dataset.rico_utils import get_all_labeled_uis_from_rico_screen
+
 
 # file to precompute the UI embeddings for later use in Screen model training
 
@@ -17,14 +20,16 @@ class ScreensList(Dataset):
     """
     Just a list of screens so that dataloader can be used
     """
+
     def __init__(self, ui_list):
         self.uis = ui_list
-    
+
     def __getitem__(self, index):
         return self.uis[index]
-    
+
     def __len__(self):
         return len(self.uis)
+
 
 parser = argparse.ArgumentParser()
 
@@ -49,7 +54,6 @@ screen_names = []
 
 trace_to_index = {}
 
-
 i = 0
 for package_dir in os.listdir(args.dataset):
     if os.path.isdir(args.dataset + '/' + package_dir):
@@ -65,11 +69,12 @@ for package_dir in os.listdir(args.dataset):
                 trace_id = package_dir + trace_dir[-1]
                 trace_to_index[trace_id] = i
                 print(i)
-                i+=1
+                i += 1
                 descriptions.append(descr)
                 UIs_trace = []
                 screen_names_trace = []
-                for view_hierarchy_json in os.listdir(args.dataset + '/' + package_dir + '/' + trace_dir + '/' + 'view_hierarchies'):
+                for view_hierarchy_json in os.listdir(
+                        args.dataset + '/' + package_dir + '/' + trace_dir + '/' + 'view_hierarchies'):
                     if view_hierarchy_json.endswith('.json') and (not view_hierarchy_json.startswith('.')):
                         json_file_path = args.dataset + '/' + package_dir + '/' + trace_dir + '/' + 'view_hierarchies' + '/' + view_hierarchy_json
                         screen_names_trace.append(json_file_path)
@@ -118,12 +123,12 @@ for trace in UIs:
 flat_screens = [u for trace in UIs for screen in trace for u in screen]
 
 num_traces = len(UIs)
-parcel_size = int(num_traces/9)
+parcel_size = int(num_traces / 9)
 
 for j in range(10):
     UI_embedding = []
-    start_trace = j*parcel_size
-    end_trace = min((j+1)*parcel_size, num_traces)
+    start_trace = j * parcel_size
+    end_trace = min((j + 1) * parcel_size, num_traces)
     parcel = UIs[start_trace:end_trace]
     flat_screens = [u for trace in parcel for screen in trace for u in screen]
 
@@ -133,17 +138,16 @@ for j in range(10):
     for data in ui_loader:
         embedding = loaded_model.model(data).detach()
 
-
     print(embedding.size())
     screen_index = 0
     for trace in tqdm.tqdm(range(start_trace, end_trace)):
         trace_emb = []
         for screen in range(len(screen_lengths[trace])):
-            screen_emb = embedding[screen_index:screen_index+screen_lengths[trace][screen]]
-            screen_index+= screen_lengths[trace][screen]
+            screen_emb = embedding[screen_index:screen_index + screen_lengths[trace][screen]]
+            screen_index += screen_lengths[trace][screen]
             screen_emb = screen_emb.tolist()
             trace_emb.append(screen_emb)
         UI_embedding.append(trace_emb)
 
     with open(args.prefix + str(j) + '_ui_emb.json', 'w', encoding='utf-8') as f:
-            json.dump(UI_embedding, f, indent=4)
+        json.dump(UI_embedding, f, indent=4)

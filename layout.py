@@ -1,16 +1,15 @@
 import argparse
 import csv
+
 import numpy as np
-import tqdm
-from PIL import Image
 import torch
-from torch.utils.data import Dataset, DataLoader
-import torch.nn as nn
+import tqdm
+from torch.utils.data import Dataset
 from torch.utils.data.sampler import SubsetRandomSampler
 
 from UI_embedding.plotter import plot_loss
 from autoencoder import ScreenLayoutDataset, LayoutAutoEncoder, LayoutTrainer
-from autoencoder import ScreenVisualLayout, ScreenVisualLayoutDataset, ImageAutoEncoder, ImageTrainer
+from autoencoder import ScreenVisualLayoutDataset, ImageAutoEncoder, ImageTrainer
 
 # file that runs training of the layout autoencoder
 
@@ -20,7 +19,8 @@ parser.add_argument("-d", "--dataset", required=True, type=str, help="dataset of
 parser.add_argument("-b", "--batch_size", type=int, default=64, help="traces in a batch")
 parser.add_argument("-e", "--epochs", type=int, default=10, help="number of epochs")
 parser.add_argument("-r", "--rate", type=float, default=0.001, help="learning rate")
-parser.add_argument("-t", "--type", type=int, default=0, help="0 to create layout autoencoder, 1 to create visual autoencoder")
+parser.add_argument("-t", "--type", type=int, default=0,
+                    help="0 to create layout autoencoder, 1 to create visual autoencoder")
 
 args = parser.parse_args()
 
@@ -39,7 +39,6 @@ if args.type == 0:
 
     train_loader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, sampler=train_sampler)
     test_loader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, sampler=test_sampler)
-
 
     model = LayoutAutoEncoder()
     model.cuda()
@@ -61,12 +60,12 @@ if args.type == 0:
         print(test_loss)
         print("--------")
 
-        if (epoch%50)==0:
+        if (epoch % 50) == 0:
             print("saved on epoch " + str(epoch))
             trainer.save(epoch)
     plot_loss(train_loss_data, test_loss_data, "output/autoencoder")
     trainer.save(args.epochs, "output/autoencoder")
-        
+
 
 elif args.type == 1:
     dataset = ScreenVisualLayoutDataset(args.dataset)
@@ -83,7 +82,6 @@ elif args.type == 1:
 
     train_loader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, sampler=train_sampler)
     test_loader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, sampler=test_sampler)
-
 
     model = ImageAutoEncoder()
     model.cuda()
@@ -105,7 +103,7 @@ elif args.type == 1:
         print(test_loss)
         print("--------")
 
-        if (epoch%50)==0:
+        if (epoch % 50) == 0:
             print("saved on epoch " + str(epoch))
             trainer.save(epoch, "output/visual_encoder_fast")
     plot_loss(train_loss_data, test_loss_data, "output/visual_encoder_fast")
@@ -114,6 +112,3 @@ elif args.type == 1:
         wr = csv.writer(myfile)
         for row in range(len(train_loss_data)):
             wr.writerow([train_loss_data[row], test_loss_data[row]])
-
-
-

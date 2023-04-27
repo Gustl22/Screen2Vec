@@ -1,16 +1,18 @@
 import argparse
 import json
+import random
+
 import numpy as np
-import tqdm
 import torch
 import torch.nn as nn
-import random
+import tqdm
+from torch.optim import Adam
 from torch.utils.data import Dataset, DataLoader
 from torch.utils.data.sampler import SubsetRandomSampler
-from torch.optim import Adam
-from sentence_transformers import SentenceTransformer
-from prediction import BaselinePredictor
+
 from UI_embedding.plotter import plot_loss
+from prediction import BaselinePredictor
+
 
 # trains a prediction model for one of our baselines
 
@@ -18,6 +20,7 @@ class BaselineDataset(Dataset):
     '''
     has traces, which have screens
     '''
+
     def __init__(self, embeddings, n):
         self.n = n
         self.traces = self.load_traces(embeddings)
@@ -30,15 +33,15 @@ class BaselineDataset(Dataset):
         # not added unless there are at least n screens in the trace
         traces = []
         if len(indexed_trace) >= self.n:
-            starting_index = random.randint(0, len(indexed_trace)-self.n)
-            screens = indexed_trace[starting_index:starting_index+self.n-2]
-            target_index = self.get_overall_index(index, starting_index+self.n -1)
+            starting_index = random.randint(0, len(indexed_trace) - self.n)
+            screens = indexed_trace[starting_index:starting_index + self.n - 2]
+            target_index = self.get_overall_index(index, starting_index + self.n - 1)
         return torch.tensor(screens), torch.tensor(target_index)
-    
+
     def __len__(self):
         return len(self.traces)
 
-    def load_traces(self,emb):
+    def load_traces(self, emb):
         traces = []
         for trace in emb:
             if len(trace) >= self.n:
@@ -59,15 +62,15 @@ class BaselineDataset(Dataset):
 class PredictionTrainer():
     def __init__(self, predictor, comparison, train_data, test_data, criterion, optimizer):
         self.predictor = predictor
-        self.comparison = torch.tensor(comparison).transpose(0,1).cuda()
+        self.comparison = torch.tensor(comparison).transpose(0, 1).cuda()
         self.train_data = train_data
         self.test_data = test_data
         self.criterion = criterion
         self.optimizer = optimizer
 
     def train(self, epoch):
-            loss = self.iteration(epoch, self.train_data)
-            return loss
+        loss = self.iteration(epoch, self.train_data)
+        return loss
 
     def test(self, epoch):
         loss = self.iteration(epoch, self.test_data, train=False)
@@ -86,21 +89,22 @@ class PredictionTrainer():
         total_loss = 0
         total_data = 0
         str_code = "train" if train else "test"
-        data_itr = tqdm.tqdm(enumerate(data_loader), desc="EP_%s:%d" % (str_code, epoch),total=len(data_loader),bar_format="{l_bar}{r_bar}")
+        data_itr = tqdm.tqdm(enumerate(data_loader), desc="EP_%s:%d" % (str_code, epoch), total=len(data_loader),
+                             bar_format="{l_bar}{r_bar}")
         for idx, data in data_itr:
             self.optimizer.zero_grad()
             embeddings, idx = data
-            total_data+=len(idx)
+            total_data += len(idx)
             embeddings = embeddings.cuda()
             idx = idx.cuda()
             predictions = self.predictor(embeddings)
             dot_products = torch.mm(predictions, self.comparison)
             loss = self.criterion(dot_products, idx)
-            total_loss+= float(loss)
+            total_loss += float(loss)
             if train:
                 loss.backward()
                 self.optimizer.step()
-        return total_loss/total_data
+        return total_loss / total_data
 
     def save(self, epoch, file_path="output/trained.model"):
         """
@@ -114,15 +118,16 @@ class PredictionTrainer():
         print("EP:%d Model Saved on:" % epoch, output_path)
         return output_path
 
+
 parser = argparse.ArgumentParser()
 
-parser.add_argument("-d", "--data", required=True, type=str, default=None, help="prefix of precomputed embeddings to test/train predictions")
+parser.add_argument("-d", "--data", required=True, type=str, default=None,
+                    help="prefix of precomputed embeddings to test/train predictions")
 parser.add_argument("-o", "--output_path", required=True, type=str, help="where to store model")
 parser.add_argument("-b", "--batch_size", type=int, default=64, help="traces in a batch")
 parser.add_argument("-e", "--epochs", type=int, default=10, help="number of epochs")
 parser.add_argument("-n", "--num_predictors", type=int, default=10, help="number of other labels used to predict one")
 parser.add_argument("-r", "--rate", type=float, default=0.001, help="learning rate")
-
 
 args = parser.parse_args()
 
@@ -168,9 +173,8 @@ for epoch in tqdm.tqdm(range(args.epochs)):
         print(test_loss)
         print("--------")
         test_loss_data.append(test_loss)
-    if (epoch%20)==0:
+    if (epoch % 20) == 0:
         print("saved on epoch " + str(epoch))
         trainer.save(epoch, args.output_path)
 plot_loss(train_loss_data, test_loss_data, args.output_path)
 trainer.save(args.epochs, args.output_path)
-

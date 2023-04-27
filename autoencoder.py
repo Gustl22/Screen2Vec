@@ -1,15 +1,15 @@
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-from torch.utils.data import Dataset
-
+import json
+import os
 from collections.abc import Iterable
 
 import numpy as np
-import os
-import json
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
 import tqdm
 from PIL import Image
+from torch.utils.data import Dataset
+
 
 # all of the classes to define and train the autoencoders:
 # both the layout and visual 
@@ -17,9 +17,9 @@ from PIL import Image
 class ScreenLayout():
 
     def __init__(self, screen_path):
-        self.pixels = np.full((100,56,2), 0, dtype=float)
-        self.vert_scale = 100/2560
-        self.horiz_scale = 56/1440
+        self.pixels = np.full((100, 56, 2), 0, dtype=float)
+        self.vert_scale = 100 / 2560
+        self.horiz_scale = 56 / 1440
         self.load_screen(screen_path)
 
     def load_screen(self, screen_path):
@@ -41,33 +41,32 @@ class ScreenLayout():
                     self.load_screen_contents(child_node)
         else:
             try:
-                if ("visible-to-user" in node and node["visible-to-user"]) or ("visible_to_user" in node and node["visible_to_user"]):
+                if ("visible-to-user" in node and node["visible-to-user"]) or (
+                        "visible_to_user" in node and node["visible_to_user"]):
                     bounds = node["bounds"]
-                    x1 = int(bounds[0]*self.horiz_scale)
-                    y1 = int(bounds[1]*self.vert_scale)
-                    x2 = int(bounds[2]*self.horiz_scale)
-                    y2 = int(bounds[3]*self.vert_scale)
+                    x1 = int(bounds[0] * self.horiz_scale)
+                    y1 = int(bounds[1] * self.vert_scale)
+                    x2 = int(bounds[2] * self.horiz_scale)
+                    y2 = int(bounds[3] * self.vert_scale)
                     if 'text' in node and node['text'] and node['text'].strip():
-                        #append in 'blue' ([0]) here
-                        self.pixels[y1:y2,x1:x2,0] = 1
-                    else: 
-                        #append in 'red' ([1]) here
-                        self.pixels[y1:y2,x1:x2,1] = 1
+                        # append in 'blue' ([0]) here
+                        self.pixels[y1:y2, x1:x2, 0] = 1
+                    else:
+                        # append in 'red' ([1]) here
+                        self.pixels[y1:y2, x1:x2, 1] = 1
             except KeyError as e:
                 print(e)
-                    
+
     def convert_to_image(self):
-        p = np.full((100,56,3), 255, dtype=np.uint)
+        p = np.full((100, 56, 3), 255, dtype=np.uint)
         for y in range(len(self.pixels)):
             for x in range(len(self.pixels[0])):
-                if (self.pixels[y][x] == [1,0]).all() or (self.pixels[y][x] == [1,1]).all():
-                    p[y][x] = [0,0,255]
-                elif (self.pixels[y][x] == [0,1]).all():
-                    p[y][x] = [255,0,0]
+                if (self.pixels[y][x] == [1, 0]).all() or (self.pixels[y][x] == [1, 1]).all():
+                    p[y][x] = [0, 0, 255]
+                elif (self.pixels[y][x] == [0, 1]).all():
+                    p[y][x] = [255, 0, 0]
         im = Image.fromarray(p.astype(np.uint8))
         im.save("example.png")
-
-
 
 
 class ScreenLayoutDataset(Dataset):
@@ -88,6 +87,7 @@ class ScreenLayoutDataset(Dataset):
                 screens.append(screen_layout)
         return screens
 
+
 class ScreenVisualLayout():
 
     def __init__(self, screen_path):
@@ -95,8 +95,9 @@ class ScreenVisualLayout():
 
     def load_screen(self, screen_path):
         im = Image.open(screen_path, 'r')
-        im = im.resize((90,160))
+        im = im.resize((90, 160))
         return np.array(im)
+
 
 class ScreenVisualLayoutDataset(Dataset):
     def __init__(self, dataset_path):
@@ -106,7 +107,7 @@ class ScreenVisualLayoutDataset(Dataset):
         return len(self.screens)
 
     def __getitem__(self, index):
-        return torch.from_numpy(self.screens[index].pixels.flatten()).type(torch.FloatTensor)/255
+        return torch.from_numpy(self.screens[index].pixels.flatten()).type(torch.FloatTensor) / 255
 
     def load_screens(self, dataset_path):
         screens = []
@@ -126,7 +127,6 @@ class LayoutEncoder(nn.Module):
         self.e2 = nn.Linear(2048, 256)
         self.e3 = nn.Linear(256, 64)
 
-
     def forward(self, input):
         encoded = F.relu(self.e3(F.relu(self.e2(F.relu(self.e1(input))))))
         return encoded
@@ -137,13 +137,14 @@ class LayoutDecoder(nn.Module):
     def __init__(self):
         super(LayoutDecoder, self).__init__()
 
-        self.d1 = nn.Linear(64,256)
+        self.d1 = nn.Linear(64, 256)
         self.d2 = nn.Linear(256, 2048)
         self.d3 = nn.Linear(2048, 11200)
 
     def forward(self, input):
         decoded = F.relu(self.d3(F.relu(self.d2(F.relu(self.d1(input))))))
         return decoded
+
 
 class LayoutAutoEncoder(nn.Module):
 
@@ -156,6 +157,7 @@ class LayoutAutoEncoder(nn.Module):
     def forward(self, input):
         return F.relu(self.dec(self.enc(input)))
 
+
 class ImageLayoutEncoder(nn.Module):
 
     def __init__(self):
@@ -164,12 +166,10 @@ class ImageLayoutEncoder(nn.Module):
         self.e1 = nn.Linear(43200, 2048)
         self.e2 = nn.Linear(2048, 256)
 
-
     def forward(self, input):
         encoded = F.relu(self.e2(F.relu(self.e1(input))))
         return encoded
 
-    
 
 class ImageLayoutDecoder(nn.Module):
 
@@ -182,6 +182,7 @@ class ImageLayoutDecoder(nn.Module):
     def forward(self, input):
         decoded = F.relu(self.d2(F.relu(self.d1(input))))
         return decoded
+
 
 class ImageAutoEncoder(nn.Module):
 
@@ -217,24 +218,24 @@ class LayoutTrainer():
 
         str_code = "train" if train else "test"
         data_itr = tqdm.tqdm(enumerate(all_data),
-                              desc="EP_%s:%d" % (str_code, epoch),
-                              total=len(all_data),
-                              bar_format="{l_bar}{r_bar}")
+                             desc="EP_%s:%d" % (str_code, epoch),
+                             total=len(all_data),
+                             bar_format="{l_bar}{r_bar}")
         if not train:
             torch.set_grad_enabled(False)
         for idx, data in data_itr:
             self.optimizer.zero_grad()
-            total_data+=1
+            total_data += 1
             data = data.cuda()
             result = self.model(data)
             encoding_loss = self.criterion(result, data)
-            total_loss+=float(encoding_loss)
+            total_loss += float(encoding_loss)
             if train:
                 encoding_loss.backward()
                 self.optimizer.step()
-        if not train: 
+        if not train:
             torch.set_grad_enabled(True)
-        return total_loss/total_data
+        return total_loss / total_data
 
     def save(self, epoch, file_path="output/autoencoder.model"):
         """
@@ -271,20 +272,20 @@ class ImageTrainer():
 
         str_code = "train" if train else "test"
         data_itr = tqdm.tqdm(enumerate(all_data),
-                              desc="EP_%s:%d" % (str_code, epoch),
-                              total=len(all_data),
-                              bar_format="{l_bar}{r_bar}")
+                             desc="EP_%s:%d" % (str_code, epoch),
+                             total=len(all_data),
+                             bar_format="{l_bar}{r_bar}")
         for idx, data in data_itr:
             self.optimizer.zero_grad()
-            total_data+=1
+            total_data += 1
             data = data.cuda()
             result = self.model(data)
             encoding_loss = self.criterion(result, data)
-            total_loss+=float(encoding_loss)
+            total_loss += float(encoding_loss)
             if train:
                 encoding_loss.backward()
                 self.optimizer.step()
-        return total_loss/total_data
+        return total_loss / total_data
 
     def save(self, epoch, file_path="output/autoencoder.model"):
         """

@@ -1,15 +1,18 @@
-import torch
-import numpy as np
 import random
-from dataset.dataset import RicoDataset
+
+import torch
 from torch.utils.data import Dataset
+
+from dataset.dataset import RicoDataset
+
 
 class ScreenVocab(Dataset):
     """
     holds the collection of screens from a RicoDataset
     used for negative sampling across traces
     """
-    def __init__(self, dataset:RicoDataset):
+
+    def __init__(self, dataset: RicoDataset):
         self.dataset = dataset
         self.screens = dataset.traces
         indices, reverse_indices = self.load_indices()
@@ -48,26 +51,27 @@ class ScreenVocab(Dataset):
             for screen_idx in range(len(self.screens[trace_idx].trace_screens)):
                 indices.append((trace_idx, screen_idx))
                 trace_indices.append(j)
-                j+=1
+                j += 1
             reverse_indices.append(trace_indices)
         return indices, reverse_indices
-    
+
     def get_vocab_size(self):
         return len(self.indices)
 
     def negative_sample(self, num_negatives, disallowed):
         disallowed = [self.reverse_indices[dis[0]][dis[1]] for dis in disallowed]
-        screens = self.get_negative_sample(num_negatives,disallowed)
-        if self.setting in [0,2,6,8]:
+        screens = self.get_negative_sample(num_negatives, disallowed)
+        if self.setting in [0, 2, 6, 8]:
             UIs = [torch.tensor(screen.UI_embeddings) for screen in screens]
         else:
-            UIs = [torch.cat((torch.tensor(screen.UI_embeddings),torch.FloatTensor(screen.coords)), dim=1) for screen in screens]
+            UIs = [torch.cat((torch.tensor(screen.UI_embeddings), torch.FloatTensor(screen.coords)), dim=1) for screen
+                   in screens]
         UI_lengths = [len(screen) for screen in UIs]
         UIs = torch.nn.utils.rnn.pad_sequence(UIs).squeeze(2).unsqueeze(0)
         descr = torch.tensor([screen.descr_emb for screen in screens]).squeeze(1).unsqueeze(0)
-        if self.setting not in [0,1,6,7]:
+        if self.setting not in [0, 1, 6, 7]:
             layouts = torch.FloatTensor([screen.layout for screen in screens]).unsqueeze(0)
-        else: 
+        else:
             layouts = None
         return UIs, descr, torch.tensor(UI_lengths).unsqueeze(0), layouts
 
@@ -76,23 +80,24 @@ class ScreenVocab(Dataset):
         for trace in self.screens:
             for screen in trace.trace_screens:
                 all_screens.append(screen)
-        end_index = min(start_index+size, len(all_screens))
+        end_index = min(start_index + size, len(all_screens))
         return_screens = all_screens[start_index: end_index]
         if end_index == len(all_screens):
             end_index = -1
-        if self.setting in [0,2,6,8]:
+        if self.setting in [0, 2, 6, 8]:
             UIs = [torch.tensor(screen.UI_embeddings) for screen in return_screens]
         else:
-            UIs = [torch.cat((torch.tensor(screen.UI_embeddings),torch.FloatTensor(screen.coords)), dim=1) for screen in return_screens]
+            UIs = [torch.cat((torch.tensor(screen.UI_embeddings), torch.FloatTensor(screen.coords)), dim=1) for screen
+                   in return_screens]
         UI_lengths = [len(screen) for screen in UIs]
         UIs = torch.nn.utils.rnn.pad_sequence(UIs).squeeze(2).unsqueeze(0)
         descr = torch.tensor([screen.descr_emb for screen in return_screens]).squeeze(1).unsqueeze(0)
-        if self.setting not in [0,1,6,7]:
+        if self.setting not in [0, 1, 6, 7]:
             layouts = torch.FloatTensor([screen.layout for screen in return_screens]).unsqueeze(0)
-        else: 
+        else:
             layouts = None
-        return UIs, descr, torch.tensor(UI_lengths).unsqueeze(0),layouts, self.indices, self.reverse_indices, end_index
-    
+        return UIs, descr, torch.tensor(UI_lengths).unsqueeze(0), layouts, self.indices, self.reverse_indices, end_index
+
     def get_name(self, overall_index):
         trace_index, screen_index = self.indices[overall_index]
         screen_name = self.screens[trace_index].trace_screens[screen_index].name
