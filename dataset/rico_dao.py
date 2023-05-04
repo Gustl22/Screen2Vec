@@ -2,7 +2,7 @@ import json
 
 import numpy as np
 
-from rico_models import RicoActivity, RicoScreen, ScreenInfo
+from .rico_models import RicoActivity, RicoScreen, ScreenInfo
 
 
 # methods for parsing rico dataset files

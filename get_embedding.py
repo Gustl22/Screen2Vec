@@ -13,7 +13,7 @@ from dataset.rico_dao import load_rico_screen_dict
 from dataset.rico_models import RicoScreen
 from dataset.rico_utils import get_all_labeled_uis_from_rico_screen
 from prediction import TracePredictor
-from types import FILE_LIKE
+from type_definitions import CustomFileLike
 
 # Generates the vector embeddings for an input screen
 
@@ -31,9 +31,8 @@ parser.add_argument("-v", "--net_version", type=int, default=4,
 args = parser.parse_args()
 
 
-def get_embedding(screen: FILE_LIKE, ui_model: FILE_LIKE, screen_model: FILE_LIKE, layout_model: FILE_LIKE,
-                  num_predictors: int,
-                  net_version: int) -> object:
+def get_embedding(screen: CustomFileLike, ui_model: CustomFileLike, screen_model: CustomFileLike,
+                  layout_model: CustomFileLike, num_predictors: int, net_version: int) -> object:
     with open(screen) as f:
         rico_screen: RicoScreen = load_rico_screen_dict(json.load(f))
     labeled_text = get_all_labeled_uis_from_rico_screen(rico_screen)

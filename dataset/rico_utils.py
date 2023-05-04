@@ -1,8 +1,8 @@
 from collections.abc import Iterable
 from typing import Union, Any
 
-from convert_class_to_label import convert_class_to_text_label
-from rico_models import RicoScreen
+from .convert_class_to_label import convert_class_to_text_label
+from .rico_models import RicoScreen
 
 
 # contains methods for collecting UI elements
