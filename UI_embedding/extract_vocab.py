@@ -11,7 +11,7 @@ from dataset.rico_utils import get_all_texts_from_rico_screen
 # finds the vocab (all GUI labels within data) to use for comparison in training
 
 parser = argparse.ArgumentParser()
-parser.add_argument("-d", "--dataset", required=True, type=str, help="path to rico dataset filtered traces")
+parser.add_argument("-d", "--dataset", required=False, default="filtered_traces", type=str, help="path to rico dataset filtered traces")
 parser.add_argument("-o", "--output", required=False, default="", type=str, help="path to location of output file")
 
 args = parser.parse_args()
