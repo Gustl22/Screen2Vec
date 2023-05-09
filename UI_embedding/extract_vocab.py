@@ -19,7 +19,11 @@ args = parser.parse_args()
 vocab = set()
 rico_dir = args.dataset
 
-for package_dir in os.listdir(rico_dir):
+dir_len = len(next(os.walk(rico_dir))[1])
+
+for idx, package_dir in enumerate(os.listdir(rico_dir)):
+    if idx % 10 == 0:
+        print("%i of %i" % (idx, dir_len), end='\r', flush=True)
     if os.path.isdir(rico_dir + '/' + package_dir):
         # for each package directory
         for trace_dir in os.listdir(rico_dir + '/' + package_dir):
