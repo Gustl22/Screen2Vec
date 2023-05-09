@@ -3,6 +3,7 @@ traces.tar.gz
 unique_uis.tar.gz
 filtered_traces/
 combined/
+vocab.json
 
 # Models
 *.ep120
