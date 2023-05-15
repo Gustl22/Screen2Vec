@@ -1,13 +1,14 @@
 # Data
 traces.tar.gz
 unique_uis.tar.gz
-filtered_traces/
+filtered_traces*/
 combined/
 vocab.json
 
 # Models
 *.ep120
 *.ep800
+vocab_emb.npy
 
 # IDEs
 .idea/
