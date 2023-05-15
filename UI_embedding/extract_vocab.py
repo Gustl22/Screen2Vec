@@ -54,6 +54,8 @@ with open(output_path, 'w', encoding='utf-8') as f:
 
 bert = SentenceTransformer('bert-base-nli-mean-tokens')
 
+print("Encode vocabulary...")
+
 vocab_emb = bert.encode(vocab_list)
 
 if args.output:
